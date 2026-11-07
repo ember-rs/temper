@@ -1,0 +1,33 @@
+name: PR title
+
+# PRs are squash-merged and the title becomes the commit subject on `main`,
+# so it must be a Conventional Commit: `type(area): summary`.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  pr-title:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check title is a Conventional Commit
+        # The title comes from an env var, never `${{ }}` inside the script:
+        # interpolating untrusted text into `run:` is a script-injection hole.
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          types='feat|fix|refactor|test|docs|ci|build|chore'
+          scopes='ingot|bellows|ember|temper|spec|infra'
+          pattern="^(${types})\((${scopes})\)!?: [^[:space:]].{0,70}$"
+          if [[ "$TITLE" =~ $pattern ]]; then
+            echo "ok: $TITLE"
+          else
+            echo "::error::PR title must match 'type(area): summary' (max ~72 chars)"
+            echo "  types:  ${types//|/, }"
+            echo "  scopes: ${scopes//|/, }"
+            echo "  got:    $TITLE"
+            exit 1
+          fi

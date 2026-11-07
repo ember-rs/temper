@@ -7,7 +7,7 @@ Rules for any coding agent working in this repo. Humans follow them too.
 1. `just check` is green. Run it before saying a task is finished.
 2. If you changed `crates/ingot` or `spec/`, `just verify` is green too. CI
    only runs the fast tier (`just ci`), so this is on you.
-3. The commit references the story it closes (`Closes #N`).
+3. The PR body references the story it closes (`Closes #N`).
 4. No test, property, proof, or invariant was weakened to get there.
 5. Report failures with their output. Never describe a failing gate as passing.
 
@@ -30,6 +30,8 @@ These files define what "correct" means (see `.github/CODEOWNERS`):
 - Add `#[allow(...)]` or `#[expect(...)]` without a `reason = "..."`.
 - Add a crate to `ingot`'s `[dependencies]`.
 - Add a license to `deny.toml` or a `cargo-machete` ignore entry.
+- Run `just ship` or enable auto-merge on a PR. Agents open drafts with
+  `just pr`; the maintainer ships.
 - Use `unsafe`. It is forbidden workspace-wide.
 
 ## Crate boundaries
@@ -69,12 +71,19 @@ Work is tracked on GitHub (`ember-rs/temper`) as
 - Stories use `.github/ISSUE_TEMPLATE/story.md`; spikes use `spike.md`.
   Stories have Context, Acceptance criteria (checkboxes that become tests),
   Verification (which gates prove it), Out of scope, and Learning.
-- One story is sized to one commit, or a short series. Work is committed
-  directly to `main` (one-person project, no PRs).
+- One story is one PR. Work on a branch named `type/topic`. `just pr` pushes
+  it and opens a **draft** PR; keep pushing freely, since drafts never merge.
+  `just ship` marks it ready and enables auto-merge: it squash-merges once the
+  `check` and `pr-title` checks pass. No approval is required.
+- `main` is protected: PRs only, squash merge only, linear history, no force
+  pushes.
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org):
   `type(scope): summary`, where `type` is `feat`, `fix`, `refactor`, `test`,
   `docs`, `ci`, `build`, or `chore`, and `scope` is the `area/*` (e.g.
-  `feat(ember): ...`). Put `Closes #N` in the footer.
+  `feat(ember): ...`). Put `Closes #N` in the commit body.
+- The PR title becomes the squash commit's subject on `main`, so it must be a
+  Conventional Commit too (the `pr-title` check enforces it). `just pr` takes
+  the title from the first commit and the body from all commit bodies.
 - Distribution is mainly a learning goal, so dogfooding (Temper working its own
   stories) comes before the distributed milestone. Early dogfooding output is
   for comparison, not merged by default.

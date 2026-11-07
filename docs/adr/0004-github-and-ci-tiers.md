@@ -1,6 +1,6 @@
 # 0004: GitHub hosting and tiered CI
 
-- **Status:** accepted
+- **Status:** accepted; the no-PR workflow is superseded by [0005](0005-auto-merged-prs.md)
 - **Date:** 2026-11-07
 
 ## Context
