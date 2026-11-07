@@ -1,7 +1,7 @@
 # Paths that define what "correct" means. Not binding yet: PRs need no
 # approval while this is a one-person project. Once agents have their own
-# identity (#9), approvals and code-owner review turn on for their PRs, so an
-# agent cannot make a failing build pass by weakening a gate.
+# identity (ADR 0006), the `agent-gate` check holds their PRs until a code
+# owner approves, so an agent cannot make a failing build pass by weakening a gate.
 /spec/                       @anthony-tarantini
 /xtask/                      @anthony-tarantini
 /deny.toml                   @anthony-tarantini
