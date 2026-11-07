@@ -27,8 +27,9 @@ it only adds waiting. Later, agents will open PRs that *should* need review.
 
 - CI gates `main`, but only the fast tier. `just verify` remains a local
   responsibility before shipping changes to `crates/ingot` or `spec/`.
-- When agents get their own identity (#9): raise required approvals to 1, turn on
-  code-owner review, and add the maintainer to the ruleset's bypass list. The
-  maintainer's PRs keep auto-merging, while agent PRs wait for review.
+- When agents get their own identity, agent PRs must wait for review while the
+  maintainer's keep auto-merging. [0006](0006-agent-identity.md) does this with
+  a required `agent-gate` check. A bypass list won't work, because auto-merge
+  ignores bypass.
 - Admin settings (ruleset, merge options) live in GitHub rather than the repo.
   They're recorded here so they can be recreated.
