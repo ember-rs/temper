@@ -28,6 +28,16 @@ to `crates/ingot` or `spec/` ([ADR 0004](docs/adr/0004-github-and-ci-tiers.md)).
 All tools are pinned and installed inside the repo (`.hermit/`). Nothing
 touches your global `~/.rustup`, `~/.cargo`, `~/.kani`, or `~/.quint`.
 
+## Workflow
+
+```sh
+git switch -c feat/some-topic
+# ...commit (Conventional Commits, `Closes #N` in the body)...
+just pr      # push + open a draft PR; push more freely, drafts never merge
+just ship    # ready + auto-merge: squash-merges when CI is green
+just unship  # back to draft to keep working
+```
+
 ## Crate map
 
 | Crate | Package | Role |

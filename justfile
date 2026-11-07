@@ -115,3 +115,36 @@ fuzz-list package="temper-ingot":
 # HTML coverage report at target/llvm-cov/html.
 cov:
     cargo llvm-cov nextest --workspace --html
+
+# --- workflow -------------------------------------------------------------------
+
+# Drafts never auto-merge, so keep pushing until you `just ship`.
+# Push the branch and open a *draft* PR, titled and described from its commits.
+pr base="main":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    branch=$(git branch --show-current)
+    if [[ "$branch" == "{{base}}" ]]; then
+        echo "on {{base}}: create a branch first (git switch -c type/topic)" >&2; exit 1
+    fi
+    git fetch -q origin {{base}}
+    if [[ -z "$(git log --oneline origin/{{base}}..HEAD)" ]]; then
+        echo "no commits ahead of origin/{{base}}" >&2; exit 1
+    fi
+    git push -q -u origin HEAD
+    if gh pr view --json url --jq .url 2>/dev/null; then exit 0; fi
+    # First commit's subject becomes the title (and the squash commit on main);
+    # commit bodies, with their `Closes #N` footers, become the PR body.
+    title=$(git log --reverse --format=%s origin/{{base}}..HEAD | head -1)
+    body=$(git log --reverse --format=%b origin/{{base}}..HEAD)
+    gh pr create --draft --base {{base}} --title "$title" --body "$body"
+
+# Mark the current branch's PR ready and squash-merge it automatically once checks pass.
+ship:
+    gh pr ready
+    gh pr merge --auto --squash
+    @gh pr view --json url,autoMergeRequest --jq '"auto-merge on: \(.url)"'
+
+# Back to draft, which cancels auto-merge, to keep working.
+unship:
+    gh pr ready --undo
