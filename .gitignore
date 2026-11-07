@@ -1,0 +1,14 @@
+/target/
+/node_modules/
+/.hermit/
+/mutants.out*/
+/spec/_apalache-out/
+_apalache-out/
+
+# Fuzz crashes must become a fixed bug + a named regression test, not a file.
+# The corpus (inputs that grew coverage) is committed and replayed by `cargo test`.
+**/__fuzz__/**/crashes/
+**/__fuzz__/**/afl_state/
+
+.DS_Store
+.env

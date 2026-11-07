@@ -1,0 +1,8 @@
+{
+  "name": "temper-spec-tooling",
+  "private": true,
+  "description": "Pins the Quint CLI used for spec/. Node itself is pinned by Hermit.",
+  "devDependencies": {
+    "@informalsystems/quint": "0.33.1"
+  }
+}

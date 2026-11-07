@@ -1,0 +1,15 @@
+# Paths that define what "correct" means. Changes here need a human review,
+# so an agent cannot make a failing build pass by weakening the gate.
+spec/.*                      @tony
+xtask/.*                     @tony
+deny\.toml                   @tony
+clippy\.toml                 @tony
+Cargo\.toml                  @tony
+\.cargo/.*                   @tony
+\.config/.*                  @tony
+justfile                     @tony
+rust-toolchain\.toml         @tony
+bin/hermit\.hcl              @tony
+\.gitea/.*                   @tony
+AGENTS\.md                   @tony
+crates/.*/tests/.*_mbt\.rs   @tony

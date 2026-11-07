@@ -1,0 +1,25 @@
+[package]
+name = "temper-ingot"
+description = "Pure domain core: workflow state machines and invariants. No IO, no async."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+name = "ingot"
+
+# Keep this list empty or near-empty. `cargo xtask layers` enforces an allowlist.
+[dependencies]
+
+[dev-dependencies]
+bolero.workspace = true
+quint-connect.workspace = true
+serde.workspace = true
+# quint-connect's `switch!` macro expands to `anyhow::...` in the caller's crate.
+anyhow.workspace = true
+
+[lints]
+workspace = true
