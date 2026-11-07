@@ -15,10 +15,15 @@ safely *because* the gates are strict.
 
 ```sh
 . bin/activate-hermit   # or prefix commands with bin/
-just bootstrap          # one-time: pinned cargo tools, Quint, Kani
-just check              # fast gate
-just verify             # everything CI runs
+just bootstrap          # one-time: tools for the fast tier
+just check              # fast gate (what CI runs, plus `just deny`)
+
+just bootstrap-heavy    # one-time, several GB: Kani, nightly, cargo-mutants, ...
+just verify             # everything, including proofs and mutation testing
 ```
+
+CI runs only the fast tier. The heavy tier runs locally before merging changes
+to `crates/ingot` or `spec/` ([ADR 0004](docs/adr/0004-github-and-ci-tiers.md)).
 
 All tools are pinned and installed inside the repo (`.hermit/`). Nothing
 touches your global `~/.rustup`, `~/.cargo`, `~/.kani`, or `~/.quint`.
@@ -40,19 +45,19 @@ Dependency direction is enforced, not just documented: see
 
 ## Verification pyramid
 
-| Layer | Tool | Command |
-|---|---|---|
-| Format, lints | rustfmt, clippy (pedantic, no `unwrap`/`panic`, `unsafe` forbidden) | `just lint` |
-| Architecture | `cargo xtask layers` | `just layers` |
-| Unit tests | nextest | `just test` |
-| Property tests | bolero (random under `cargo test`) | `just test` |
-| Spec ↔ code | Quint traces replayed against Rust via quint-connect | `just test` |
-| Fuzzing | bolero + libFuzzer + ASan | `just fuzz <harness>` |
-| Bounded proofs | Kani | `just kani` |
-| Spec model checking | Quint + Apalache | `just spec` |
-| Test strength | cargo-mutants | `just mutants` |
-| Supply chain | cargo-deny, cargo-machete | `just deny`, `just machete` |
-| Coverage | cargo-llvm-cov (report only) | `just cov` |
+| Layer | Tool | Command | In CI |
+|---|---|---|---|
+| Format, lints | rustfmt, clippy (pedantic, no `unwrap`/`panic`, `unsafe` forbidden) | `just lint` | ✓ |
+| Architecture | `cargo xtask layers` | `just layers` | ✓ |
+| Unit tests | nextest | `just test` | ✓ |
+| Property tests | bolero (random under `cargo test`) | `just test` | ✓ |
+| Spec ↔ code | Quint traces replayed against Rust via quint-connect | `just test` | ✓ |
+| Supply chain | cargo-deny, cargo-machete | `just deny`, `just machete` | ✓ |
+| Fuzzing | bolero + libFuzzer + ASan | `just fuzz <harness>` | local |
+| Bounded proofs | Kani | `just kani` | local |
+| Spec model checking | Quint + Apalache | `just spec` | local |
+| Test strength | cargo-mutants | `just mutants` | local |
+| Coverage | cargo-llvm-cov (report only) | `just cov` | local |
 
 See [ADR 0003](docs/adr/0003-verification-stack.md) for why each layer exists.
 

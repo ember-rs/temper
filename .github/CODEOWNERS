@@ -1,0 +1,16 @@
+# Paths that define what "correct" means. The maintainer commits directly to
+# main; this binds once agents work through their own branches and PRs
+# (see #9), so an agent cannot make a failing build pass by weakening a gate.
+/spec/                       @anthony-tarantini
+/xtask/                      @anthony-tarantini
+/deny.toml                   @anthony-tarantini
+/clippy.toml                 @anthony-tarantini
+/Cargo.toml                  @anthony-tarantini
+/.cargo/                     @anthony-tarantini
+/.config/                    @anthony-tarantini
+/justfile                    @anthony-tarantini
+/rust-toolchain.toml         @anthony-tarantini
+/bin/hermit.hcl              @anthony-tarantini
+/.github/                    @anthony-tarantini
+/AGENTS.md                   @anthony-tarantini
+/crates/*/tests/*_mbt.rs     @anthony-tarantini

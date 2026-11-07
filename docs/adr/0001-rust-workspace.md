@@ -24,6 +24,6 @@ contributor (human, CI, or agent) runs the exact same tools.
 
 ## Consequences
 
-- A fresh clone downloads several GB on first bootstrap (two Rust toolchains,
-  Kani, a JDK). CI caches `.hermit/`.
+- The full toolchain is several GB (two Rust toolchains, Kani, a JDK), so
+  bootstrap is split into a fast tier and a heavy tier (see ADR 0004).
 - Stable Rust everywhere except fuzzing, which uses the nightly that Kani pins.

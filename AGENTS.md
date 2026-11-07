@@ -5,18 +5,22 @@ Rules for any coding agent working in this repo. Humans follow them too.
 ## Definition of done
 
 1. `just check` is green. Run it before saying a task is finished.
-2. If you changed `crates/ingot` or `spec/`, `just verify` is green too.
-3. Report failures with their output. Never describe a failing gate as passing.
+2. If you changed `crates/ingot` or `spec/`, `just verify` is green too. CI
+   only runs the fast tier (`just ci`), so this is on you.
+3. The commit references the story it closes (`Closes #N`).
+4. No test, property, proof, or invariant was weakened to get there.
+5. Report failures with their output. Never describe a failing gate as passing.
 
 ## Environment
 
 - Use Hermit tools: `. bin/activate-hermit`, or call `bin/just`, `bin/cargo`.
   Do not use globally installed `cargo`, `rustc`, or `quint`.
-- Do not install tools or add dependencies outside `just bootstrap`.
+- Do not install tools or add dependencies outside `just bootstrap` and
+  `just bootstrap-heavy`.
 
 ## Never, without explicit human approval
 
-These files define what "correct" means (see `.gitea/CODEOWNERS`):
+These files define what "correct" means (see `.github/CODEOWNERS`):
 
 - Weaken or delete a test, property, Kani proof, or Quint invariant to make a
   build pass. Fix the code instead, or stop and explain why the spec is wrong.
@@ -49,6 +53,44 @@ in another crate's public API.
 - No `unwrap`, `expect`, `panic!`, `todo!`, or `unimplemented!` outside tests.
   Return typed errors.
 - Every public item has a doc comment.
+
+## Planning and issues
+
+Work is tracked on GitHub (`ember-rs/temper`) as
+**milestones → epics → stories**.
+
+- **Milestones** are ordered outcomes, each ending in something demoable. No
+  due dates; order is the priority.
+- **Epics** are issues of type `Epic`. Their stories are linked as GitHub
+  sub-issues, so the epic shows progress.
+- Every issue has exactly one **issue type** (`Epic`, `Story`, `Spike`, `Bug`,
+  `Chore`), belongs to a milestone, and has one or more `area/*` labels
+  (`ingot`, `bellows`, `ember`, `temper`, `spec`, `infra`).
+- Stories use `.github/ISSUE_TEMPLATE/story.md`; spikes use `spike.md`.
+  Stories have Context, Acceptance criteria (checkboxes that become tests),
+  Verification (which gates prove it), Out of scope, and Learning.
+- One story is sized to one commit, or a short series. Work is committed
+  directly to `main` (one-person project, no PRs).
+- Commits follow [Conventional Commits](https://www.conventionalcommits.org):
+  `type(scope): summary`, where `type` is `feat`, `fix`, `refactor`, `test`,
+  `docs`, `ci`, `build`, or `chore`, and `scope` is the `area/*` (e.g.
+  `feat(ember): ...`). Put `Closes #N` in the footer.
+- Distribution is mainly a learning goal, so dogfooding (Temper working its own
+  stories) comes before the distributed milestone. Early dogfooding output is
+  for comparison, not merged by default.
+
+## Learning
+
+This project is also how its maintainer learns Rust. Learning happens inside
+regular stories, not a separate track.
+
+- Each story's **Learning** section lists the concepts and Rust details it
+  exercises, plus check-in questions.
+- When implementing, explain non-obvious Rust choices (ownership, borrowing,
+  traits, error conversion, async) and the alternatives you rejected. Don't
+  silently hand over finished code.
+- Check that both the idea and the Rust intricacies landed, for example by
+  asking the check-in questions and recording answers in the story comments.
 
 ## Writing tests
 
