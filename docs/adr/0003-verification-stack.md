@@ -17,7 +17,7 @@ the distributed protocol. We also want gates strict enough that an agent cannot
 | Spec ↔ implementation | **quint-connect** | Replays Quint traces against the real Rust code, so the spec can't silently drift from the implementation. |
 | Properties + fuzzing | **bolero** | One harness runs as a randomized test (`cargo test`), a coverage-guided fuzz target (`cargo bolero`), and a Kani harness. |
 | Proofs | **Kani** (native `#[kani::proof]`) | Bounded model checking. Native proofs over `kani::any()` states prove invariants are *inductive*, which bolero's sequence harness can't do. Function contracts are available later. |
-| Test strength | **cargo-mutants** | Catches tests that pass but assert nothing. Full run on `main`, changed lines on PRs. |
+| Test strength | **cargo-mutants** | Catches tests that pass but assert nothing. Run locally: `just mutants`, or `just mutants-diff` for changed lines. |
 | Supply chain | **cargo-deny**, **cargo-machete** | License allowlist = exactly what's in use; any addition is a reviewed change. |
 
 Later, once there are actors and a network: Stateright (model checking actual

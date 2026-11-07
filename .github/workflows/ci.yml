@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Match bin/hermit.hcl so rust-cache finds the project-local cargo home.
+  CARGO_HOME: ${{ github.workspace }}/.hermit/rust
+  RUSTUP_HOME: ${{ github.workspace }}/.hermit/rustup
+
+# CI runs the fast tier only (`just ci`). The heavy tier (Quint + Apalache,
+# Kani, mutation testing) runs locally via `just verify`. See ADR 0004.
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Cache Hermit packages and toolchains
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/hermit
+            .hermit/rustup
+            .hermit/node
+            .hermit/quint
+          key: tools-${{ runner.os }}-${{ hashFiles('bin/hermit.hcl', 'bin/.*.pkg', 'rust-toolchain.toml', 'package-lock.json') }}
+      - name: Cache cargo registry and target
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - name: Bootstrap
+        run: ./bin/just bootstrap
+      - name: Fast gate
+        run: ./bin/just ci

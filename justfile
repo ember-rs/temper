@@ -5,7 +5,8 @@
 #
 # Tiers:
 #   just check    fast inner loop (seconds): fmt, clippy, layers, tests, unused deps
-#   just verify   everything CI runs: check + deny + spec + kani + mutants
+#   just ci       what CI runs: check + deny
+#   just verify   everything, local only: ci + spec + kani + mutants
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
@@ -22,17 +23,21 @@ nightly := "nightly-2026-08-21"
 default:
     @just --list --unsorted
 
-# One-time setup after clone: pinned cargo tools, Quint, Kani.
+# Setup for the fast tier (`just check`, `just ci`). Enough for CI.
 bootstrap:
     cargo binstall --no-confirm --locked --disable-telemetry \
+        cargo-machete@{{machete_version}}
+    npm ci --no-fund --no-audit
+
+# Setup for the heavy tier (`just verify`, fuzzing, coverage). Local only; several GB.
+bootstrap-heavy: bootstrap
+    cargo binstall --no-confirm --locked --disable-telemetry \
         cargo-llvm-cov@{{llvm_cov_version}} \
-        cargo-machete@{{machete_version}} \
         cargo-bolero@{{bolero_version}} \
         kani-verifier@{{kani_version}}
     # Prebuilt cargo-mutants is x86_64-only on macOS; build it natively.
     cargo binstall --no-confirm --locked --disable-telemetry --strategies compile \
         cargo-mutants@{{mutants_version}}
-    npm ci --no-fund --no-audit
     cargo kani setup
     rustup toolchain install {{nightly}} --profile minimal
 
@@ -62,14 +67,17 @@ test *args:
 machete:
     cargo machete
 
-# --- slow tier -----------------------------------------------------------------
-
-# Everything CI runs.
-verify: check deny spec kani mutants
-
 # Supply chain: advisories, licenses, bans, sources.
 deny:
     cargo deny --locked check
+
+# What CI runs: the fast gate plus the supply-chain check.
+ci: check deny
+
+# --- heavy tier (local; needs `just bootstrap-heavy`) -----------------------------
+
+# Everything. Run before merging changes to `crates/ingot` or `spec/`.
+verify: ci spec kani mutants
 
 # Quint: typecheck, spec unit tests, randomized simulation, then Apalache model check.
 spec: spec-quick
