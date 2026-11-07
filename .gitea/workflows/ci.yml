@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Every tool comes from Hermit + `just bootstrap`; the runner needs only git,
+# bash, curl, and a C toolchain.
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: linux
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .hermit
+            ~/.cache/hermit
+            target
+          key: hermit-${{ runner.os }}-${{ hashFiles('bin/hermit.hcl', 'bin/.*.pkg', 'rust-toolchain.toml', 'justfile', 'Cargo.lock', 'package-lock.json') }}
+          restore-keys: hermit-${{ runner.os }}-
+      - name: Bootstrap
+        run: ./bin/just bootstrap
+      - name: Fast gate
+        run: ./bin/just check
+
+  verify:
+    needs: check
+    runs-on: linux
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .hermit
+            ~/.cache/hermit
+            target
+          key: hermit-${{ runner.os }}-${{ hashFiles('bin/hermit.hcl', 'bin/.*.pkg', 'rust-toolchain.toml', 'justfile', 'Cargo.lock', 'package-lock.json') }}
+          restore-keys: hermit-${{ runner.os }}-
+      - name: Bootstrap
+        run: ./bin/just bootstrap
+      - name: Supply chain
+        run: ./bin/just deny
+      - name: Spec (Quint + Apalache)
+        run: ./bin/just spec
+      - name: Proofs (Kani)
+        run: ./bin/just kani
+      - name: Mutation testing (changed lines)
+        if: github.event_name == 'pull_request'
+        run: ./bin/just mutants-diff origin/${{ github.base_ref }}
+      - name: Mutation testing (full)
+        if: github.event_name == 'push'
+        run: ./bin/just mutants

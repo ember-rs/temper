@@ -1,0 +1,58 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "xtask"]
+default-members = ["crates/*"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT OR Apache-2.0"
+repository = "https://git.tarantini.io/tony/temper"
+publish = false
+
+# Internal crates are imported by their short themed name:
+#   use ingot::Lifecycle;   // not temper_ingot::Lifecycle
+[workspace.dependencies]
+ingot = { package = "temper-ingot", path = "crates/ingot" }
+bellows = { package = "temper-bellows", path = "crates/bellows" }
+ember = { package = "temper-ember", path = "crates/ember" }
+
+# default-features = false: no postgres yet, and its `rig` feature pins an older
+# rig than ember uses. bellows stays LLM-agnostic; temper wires the two.
+graph-flow = { version = "0.8.1", default-features = false }
+rig-core = "0.46.0"
+thiserror = "2.0.21"
+
+bolero = "0.13.7"
+quint-connect = "0.1.2"
+serde = { version = "1.0", features = ["derive"] }
+anyhow = "1.0"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+unreachable_pub = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(kani)", "cfg(fuzzing)"] }
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+print_stdout = "warn"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+# Used by `cargo bolero test` (coverage-guided fuzzing). Keep debug assertions
+# and overflow checks on so the fuzzer sees the same panics tests do.
+[profile.fuzz]
+inherits = "dev"
+opt-level = 3
+incremental = false
+codegen-units = 1

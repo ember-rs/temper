@@ -1,0 +1,7 @@
+# cargo-mutants. A surviving mutant means a test is missing or too weak.
+test_tool = "nextest"
+# xtask is tooling; mutating it tests nothing about Temper.
+exclude_globs = ["xtask/**"]
+# `#[cfg(kani)]` proofs only run under `cargo kani`, never under `cargo test`,
+# so their mutants can't be caught here. `just kani` covers them.
+exclude_re = ["proofs::"]
