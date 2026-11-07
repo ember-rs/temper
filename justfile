@@ -11,13 +11,19 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 # Tools not packaged by Hermit, installed into the project-local CARGO_HOME.
+# renovate: datasource=crate depName=cargo-mutants
 mutants_version := "27.1.0"
+# renovate: datasource=crate depName=cargo-llvm-cov
 llvm_cov_version := "0.9.1"
+# renovate: datasource=crate depName=cargo-machete
 machete_version := "0.9.2"
+# renovate: datasource=crate depName=cargo-bolero
 bolero_version := "0.13.5"
+# renovate: datasource=crate depName=kani-verifier
 kani_version := "0.68.0"
 
-# Nightly used only for fuzzing. Matches Kani's pinned nightly to avoid a second download.
+# Nightly used only for fuzzing. Matches Kani's pinned nightly to avoid a second
+# download, so it moves with `kani_version` by hand (Renovate can't infer it).
 nightly := "nightly-2026-08-21"
 
 default:
