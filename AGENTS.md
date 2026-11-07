@@ -18,6 +18,23 @@ Rules for any coding agent working in this repo. Humans follow them too.
 - Do not install tools or add dependencies outside `just bootstrap` and
   `just bootstrap-heavy`.
 
+## Dependency updates
+
+Renovate (`.github/renovate.json5`) opens grouped PRs every Monday for
+crates, `Cargo.lock`, GitHub Actions (kept on SHA pins), Hermit packages,
+Quint, the Rust toolchain, and the cargo tools pinned in the `justfile`
+(each pin there carries a `# renovate:` comment). Nothing auto-merges.
+
+- A new pinned tool in the `justfile` needs a `# renovate: datasource=crate
+  depName=<crate>` comment on the line above it.
+- `nightly` in the `justfile` is bumped by hand, to match the
+  `rust-toolchain.toml` of the pinned Kani release.
+- Update PRs that touch `ingot`'s verification stack (bolero, quint-connect,
+  Quint, Kani) need `just verify` locally before shipping.
+- To bump something by hand: `bin/hermit upgrade <pkg>` for Hermit packages,
+  edit the pin for everything else, then `just bootstrap` (or
+  `bootstrap-heavy`) and `just check`.
+
 ## Never, without explicit human approval
 
 These files define what "correct" means (see `.github/CODEOWNERS`):

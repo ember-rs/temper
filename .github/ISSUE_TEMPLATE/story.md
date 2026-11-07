@@ -1,6 +1,6 @@
 ---
 name: Story
-about: A slice of work sized to one commit (or a short series) on main
+about: A slice of work sized to one PR
 type: Story
 ---
 

@@ -1,0 +1,93 @@
+// Renovate keeps every pin in the repo current: crates, GitHub Actions (SHA
+// pins with version comments), Hermit packages, Quint, the Rust toolchain, and
+// the cargo tools pinned in the justfile. Nothing auto-merges; updates arrive
+// as weekly grouped PRs that go through the same gates as any other change.
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:recommended",
+    // Actions stay pinned to a full SHA, with the version as a trailing comment.
+    "helpers:pinGitHubActionDigests",
+    ":semanticCommits",
+  ],
+  schedule: ["before 6am on monday"],
+  timezone: "America/New_York",
+  lockFileMaintenance: {
+    enabled: true,
+    schedule: ["before 6am on monday"],
+  },
+
+  // Titles must pass the `pr-title` check: `type(area): summary`.
+  semanticCommitType: "build",
+  semanticCommitScope: "infra",
+
+  // Keep Cargo.toml requirements in step with what Cargo.lock resolves.
+  rangeStrategy: "bump",
+
+  customManagers: [
+    {
+      // Tools in the justfile, annotated with a `# renovate:` comment.
+      customType: "regex",
+      managerFilePatterns: ["/^justfile$/"],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n[a-z_]+ := "(?<currentValue>[^"]+)"',
+      ],
+    },
+    {
+      customType: "regex",
+      managerFilePatterns: ["/^rust-toolchain\\.toml$/"],
+      matchStrings: ['channel = "(?<currentValue>\\d+\\.\\d+\\.\\d+)"'],
+      depNameTemplate: "rust",
+      packageNameTemplate: "rust-lang/rust",
+      datasourceTemplate: "github-releases",
+    },
+  ],
+
+  packageRules: [
+    {
+      groupName: "GitHub Actions",
+      matchManagers: ["github-actions"],
+    },
+    {
+      groupName: "Hermit packages",
+      matchManagers: ["hermit"],
+      matchUpdateTypes: ["minor", "patch"],
+    },
+    {
+      groupName: "cargo tools",
+      matchManagers: ["custom.regex"],
+      matchFileNames: ["justfile"],
+      matchUpdateTypes: ["minor", "patch"],
+    },
+    {
+      groupName: "crates",
+      matchManagers: ["cargo"],
+      matchUpdateTypes: ["minor", "patch"],
+    },
+    {
+      // quint-connect drives the Quint CLI, so they move together.
+      groupName: "Quint",
+      matchPackageNames: ["@informalsystems/quint", "quint-connect"],
+    },
+    {
+      // Kani pins its own nightly, and the justfile reuses it for fuzzing.
+      matchPackageNames: ["kani-verifier"],
+      prBodyNotes: [
+        "Kani pins a nightly toolchain. Update `nightly` in the justfile to the channel in this Kani release's `rust-toolchain.toml`, then run `just bootstrap-heavy && just kani`.",
+      ],
+    },
+    {
+      // graph-flow's `rig` feature pins an older rig-core (ADR 0002). Check it
+      // still builds with default-features off before taking a new rig.
+      matchPackageNames: ["rig-core", "graph-flow"],
+      groupName: null,
+      prBodyNotes: ["See ADR 0002 on graph-flow and rig-core versions."],
+    },
+    {
+      // Code that changes `ingot`'s behaviour needs `just verify`, which CI
+      // does not run. Bolero and quint-connect are ingot dev-dependencies.
+      matchPackageNames: ["bolero", "quint-connect", "@informalsystems/quint"],
+      prBodyNotes: ["Touches the verification stack: run `just verify` locally before shipping."],
+    },
+  ],
+}
