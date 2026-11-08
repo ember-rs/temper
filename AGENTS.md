@@ -86,8 +86,14 @@ Work is tracked on GitHub (`ember-rs/temper`) as
   `Chore`), belongs to a milestone, and has one or more `area/*` labels
   (`ingot`, `bellows`, `ember`, `temper`, `spec`, `infra`).
 - Stories use `.github/ISSUE_TEMPLATE/story.md`; spikes use `spike.md`.
-  Stories have Context, Acceptance criteria (checkboxes that become tests),
-  Verification (which gates prove it), Out of scope, and Learning.
+  Stories are user stories ("As a ..., I want ..., so that ..."), with
+  Context, Acceptance criteria (observable behaviour that becomes tests),
+  Open decisions, Verification (which gates prove it), Out of scope, and
+  Learning.
+- Stories describe outcomes, not implementations. Design choices are listed
+  under Open decisions and made when the story is picked up. Record each
+  decision and its reason in the issue, and in an ADR when it outlives the
+  story.
 - One story is one PR. Work on a branch named `type/topic`. `just pr` pushes
   it and opens a **draft** PR; keep pushing freely, since drafts never merge.
   `just ship` marks it ready and enables auto-merge: it squash-merges once the
