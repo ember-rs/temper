@@ -56,11 +56,11 @@ These files define what "correct" means (see `.github/CODEOWNERS`):
 | Crate | May depend on | Must not depend on |
 |---|---|---|
 | `ingot` | nothing | everything (std only) |
-| `bellows` | `ingot`, `graph-flow` | `ember`, `rig-core` |
-| `ember` | `ingot`, `rig-core` | `bellows`, `graph-flow` |
+| `bellows` | `ingot`, `graph-flow` | `ember`, `agent-client-protocol` |
+| `ember` | `ingot`, `agent-client-protocol` | `bellows`, `graph-flow` |
 | `temper` | all of the above | — |
 
-`cargo xtask layers` enforces this. Do not let `graph-flow` or `rig` types appear
+`cargo xtask layers` enforces this. Do not let `graph-flow` or ACP types appear
 in another crate's public API.
 
 ## Writing code

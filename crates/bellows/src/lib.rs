@@ -5,4 +5,4 @@
 //! for a home-grown one later. Extract a trait when the second implementation
 //! exists, not before.
 //!
-//! Must not depend on `ember` or `rig-core` (`cargo xtask layers`).
+//! Must not depend on `ember` or `agent-client-protocol` (`cargo xtask layers`).

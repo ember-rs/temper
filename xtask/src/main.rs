@@ -30,13 +30,13 @@ const RULES: &[Rule] = &[
     },
     Rule {
         krate: "temper-bellows",
-        check: Check::Forbid(&["temper-ember", "rig-core"]),
-        why: "the graph engine stays LLM-agnostic; the temper binary wires them together",
+        check: Check::Forbid(&["temper-ember", "agent-client-protocol"]),
+        why: "the graph engine stays agent-agnostic; the temper binary wires them together",
     },
     Rule {
         krate: "temper-ember",
         check: Check::Forbid(&["temper-bellows", "graph-flow"]),
-        why: "LLM access must not know about workflow graphs",
+        why: "agent access must not know about workflow graphs",
     },
 ];
 

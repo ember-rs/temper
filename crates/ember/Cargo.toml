@@ -1,6 +1,6 @@
 [package]
 name = "temper-ember"
-description = "LLM access. The only crate that depends on rig."
+description = "Coding agents over ACP. The only crate that speaks the Agent Client Protocol."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,11 +13,11 @@ name = "ember"
 
 [dependencies]
 ingot.workspace = true
-rig-core.workspace = true
+agent-client-protocol.workspace = true
 
 [package.metadata.cargo-machete]
 # Scaffold: compile-checked only. Remove each entry once it is actually used.
-ignored = ["rig-core", "ingot"]
+ignored = ["agent-client-protocol", "ingot"]
 
 [lints]
 workspace = true
