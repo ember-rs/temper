@@ -1,6 +1,8 @@
-//! LLM access for Temper.
+//! Coding agents for Temper, driven over the Agent Client Protocol (ACP).
 //!
-//! The only crate allowed to depend on `rig-core`. Exposes provider-agnostic
-//! types so the rest of the workspace never names a rig type.
+//! Temper doesn't run its own agent loop. It is an ACP client that drives
+//! existing harnesses. This is the only crate allowed to depend on
+//! `agent-client-protocol`, and it exposes its own types so the rest of the
+//! workspace never names an ACP type.
 //!
 //! Must not depend on `bellows` or `graph-flow` (`cargo xtask layers`).

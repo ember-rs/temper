@@ -75,13 +75,6 @@
       ],
     },
     {
-      // graph-flow's `rig` feature pins an older rig-core (ADR 0002). Check it
-      // still builds with default-features off before taking a new rig.
-      matchPackageNames: ["rig-core", "graph-flow"],
-      groupName: null,
-      prBodyNotes: ["See ADR 0002 on graph-flow and rig-core versions."],
-    },
-    {
       // Code that changes `ingot`'s behaviour needs `just verify`, which CI
       // does not run. Bolero and quint-connect are ingot dev-dependencies.
       matchPackageNames: ["bolero", "quint-connect", "@informalsystems/quint"],

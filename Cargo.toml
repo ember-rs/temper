@@ -18,10 +18,10 @@ ingot = { package = "temper-ingot", path = "crates/ingot" }
 bellows = { package = "temper-bellows", path = "crates/bellows" }
 ember = { package = "temper-ember", path = "crates/ember" }
 
-# default-features = false: no postgres yet, and its `rig` feature pins an older
-# rig than ember uses. bellows stays LLM-agnostic; temper wires the two.
+# default-features = false: no postgres yet, and no `rig` feature. bellows stays
+# agent-agnostic; temper wires it to ember.
 graph-flow = { version = "0.8.1", default-features = false }
-rig-core = "0.46.0"
+agent-client-protocol = "5.0.0"
 thiserror = "2.0.21"
 
 bolero = "0.13.7"

@@ -8,6 +8,11 @@ types and unit tests up through property tests, fuzzing, bounded proofs, and
 model-checked specifications. The goal is a codebase where agents can work
 safely *because* the gates are strict.
 
+Temper doesn't write its own agents. It drives existing coding agents (Claude
+Code, Codex, ...) over the [Agent Client Protocol](https://agentclientprotocol.com)
+and owns everything around them: the workflow, the sandbox, and the gates that
+decide whether their work is accepted.
+
 **Status:** scaffold. The crates are empty except for a throwaway exemplar in
 `ingot::lifecycle` that exists to prove every gate is wired.
 
@@ -44,7 +49,7 @@ just unship  # back to draft to keep working
 |---|---|---|
 | `ingot` | `temper-ingot` | Pure domain core: state machines, invariants. No IO, no async, no deps. |
 | `bellows` | `temper-bellows` | Workflow graph engine. The only crate that touches `graph-flow`. |
-| `ember` | `temper-ember` | LLM access. The only crate that touches `rig`. |
+| `ember` | `temper-ember` | Coding agents over ACP. The only crate that touches `agent-client-protocol`. |
 | `temper` | `temper` | The binary and composition root. Wires the others together. |
 | `xtask` | `xtask` | Repo automation (`cargo xtask layers`). |
 
