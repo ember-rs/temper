@@ -1,6 +1,7 @@
 // Renovate keeps every pin in the repo current: crates, GitHub Actions (SHA
-// pins with version comments), Hermit packages, Quint, the Rust toolchain, and
-// the cargo tools pinned in the justfile. Nothing auto-merges; updates arrive
+// pins with version comments), Hermit packages, Quint, the Rust toolchain
+// (built-in `rust-toolchain` manager), and the cargo tools pinned in the
+// justfile. Nothing auto-merges; updates arrive
 // as weekly grouped PRs that go through the same gates as any other change.
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
@@ -33,17 +34,14 @@
         '# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\n[a-z_]+ := "(?<currentValue>[^"]+)"',
       ],
     },
-    {
-      customType: "regex",
-      managerFilePatterns: ["/^rust-toolchain\\.toml$/"],
-      matchStrings: ['channel = "(?<currentValue>\\d+\\.\\d+\\.\\d+)"'],
-      depNameTemplate: "rust",
-      packageNameTemplate: "rust-lang/rust",
-      datasourceTemplate: "github-releases",
-    },
   ],
 
   packageRules: [
+    {
+      // config:recommended types dependency PRs as `fix`/`chore`; use one type.
+      matchPackageNames: ["*"],
+      semanticCommitType: "build",
+    },
     {
       groupName: "GitHub Actions",
       matchManagers: ["github-actions"],
