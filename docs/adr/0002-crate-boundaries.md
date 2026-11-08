@@ -9,8 +9,17 @@ Temper orchestrates coding agents; it doesn't implement them. Existing harnesses
 (Claude Code, Codex, ...) already own the agent loop: prompts, context, tools,
 and model choice. Temper drives them over the
 [Agent Client Protocol](https://agentclientprotocol.com) (ACP), as the client.
-In ACP the agent asks the client for permission and can be offered file and
-terminal access by the client, so the client is where Temper's leash attaches.
+
+Spike #37 drove Claude Code and Codex over ACP and found how much of a leash
+the client actually holds:
+
+- Both report every tool call, so the client sees what the agent does.
+- Neither does its work through the client. They read, write, and run commands
+  themselves, even when the client offers file and terminal access.
+- They ask the client for permission only when the client puts the session in
+  a strict mode. In their default modes they never ask, and denying has no
+  effect. In a strict mode they ask before every write and command and respect
+  a denial. They never ask before reads.
 
 The first versions will lean on `graph-flow` (workflow graphs) and
 `agent-client-protocol` (the protocol's official Rust SDK). Either may be
@@ -44,6 +53,7 @@ We don't use it: the graph engine never talks to a model or an agent directly.
   model choice belong to the harness, and Temper sees only what ACP exposes.
 - What Temper relies on from an agent has to be written down and checked
   against each harness, because Temper can't enforce it by construction.
-- Anything an agent can do without asking the client must be contained by the
-  sandbox, not by the protocol.
+- The sandbox, not the protocol, is the boundary. ACP adds visibility and a
+  veto over what the agent chooses to ask about, and only once Temper has set
+  a strict mode itself.
 - Swapping either library touches exactly one crate plus the composition root.
