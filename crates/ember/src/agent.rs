@@ -3,10 +3,11 @@ use tokio::sync::{mpsc, oneshot};
 
 use crate::Error;
 
+type Connect = dyn Fn() -> (acp::Channel, tokio::task::JoinHandle<acp::Result<()>>) + Send + Sync;
+
 /// An agent capable of starting sessions.
 pub struct Agent {
-    connect:
-        Box<dyn Fn() -> (acp::Channel, tokio::task::JoinHandle<acp::Result<()>>) + Send + Sync>,
+    connect: Box<Connect>,
 }
 
 enum Command {
@@ -43,37 +44,36 @@ impl Agent {
             if let Err(error) = server_result
                 && !error.is_cancelled()
             {
-                return Err(Error::Communication {
-                    message: error.to_string(),
-                });
+                return Err(Error::communication(error));
             }
-            result.map_err(|error| Error::Communication {
-                message: error.to_string(),
-            })
+            result.map_err(Error::communication)
         });
         if initialized.await.is_err() {
             return Err(match task.await {
                 Ok(Err(error)) => error,
-                Ok(Ok(())) => Error::Communication {
-                    message: "agent exited during setup".into(),
-                },
-                Err(error) => Error::Communication {
-                    message: error.to_string(),
-                },
+                Ok(Ok(())) => {
+                    Error::communication(std::io::Error::other("agent exited during setup"))
+                }
+                Err(error) => Error::communication(error),
             });
         }
         Ok(Session { commands, task })
     }
 
     #[cfg(feature = "test-support")]
-    pub(crate) fn fake(reply: Vec<String>, reject_session: bool) -> Self {
+    pub(crate) fn fake(
+        reply: Vec<String>,
+        setup: crate::test_support::SessionSetup,
+        notification: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
+    ) -> Self {
         Self {
             connect: Box::new(move || {
                 let (client, server) = acp::Channel::duplex();
                 let task = tokio::spawn(crate::test_support::serve(
                     server,
                     reply.clone(),
-                    reject_session,
+                    setup,
+                    notification.clone(),
                 ));
                 (client, task)
             }),
@@ -98,13 +98,9 @@ impl Session {
                 response: sender,
             })
             .await
-            .map_err(|error| Error::Communication {
-                message: error.to_string(),
-            })?;
+            .map_err(Error::communication)?;
 
-        receiver.await.map_err(|error| Error::Communication {
-            message: error.to_string(),
-        })?
+        receiver.await.map_err(Error::communication)?
     }
 
     /// Close the session and wait for the client to stop.
@@ -116,12 +112,8 @@ impl Session {
             .commands
             .send(Command::Close)
             .await
-            .map_err(|error| Error::Communication {
-                message: error.to_string(),
-            });
-        let result = self.task.await.map_err(|error| Error::Communication {
-            message: error.to_string(),
-        })?;
+            .map_err(Error::communication);
+        let result = self.task.await.map_err(Error::communication)?;
         sent?;
         result
     }
@@ -156,11 +148,7 @@ async fn run_client(
                                     Ok(()) => session.read_to_string().await,
                                     Err(error) => Err(error),
                                 }
-                                .map_err(|error| {
-                                    Error::Communication {
-                                        message: error.to_string(),
-                                    }
-                                });
+                                .map_err(Error::communication);
                                 let _ = response.send(result);
                             }
                             Command::Close => break,
@@ -185,8 +173,13 @@ mod tests {
                 let (client, server) = super::acp::Channel::duplex();
                 let token = token.clone();
                 let task = tokio::spawn(async move {
-                    let result =
-                        crate::test_support::serve(server, vec!["reply".to_owned()], false).await;
+                    let result = crate::test_support::serve(
+                        server,
+                        vec!["reply".to_owned()],
+                        crate::test_support::SessionSetup::Accept,
+                        None,
+                    )
+                    .await;
                     drop(token);
                     result
                 });
@@ -198,13 +191,17 @@ mod tests {
     #[cfg(feature = "test-support")]
     #[tokio::test]
     async fn setup_preserves_the_agents_rejection() -> Result<(), Box<dyn std::error::Error>> {
-        let agent = super::Agent::fake(vec![], true);
+        let agent = super::Agent::fake(vec![], crate::test_support::SessionSetup::Reject, None);
         let result = agent.start_session(&std::env::current_dir()?).await;
         match result {
-            Err(error) => assert!(
-                error.to_string().contains("scripted session rejection"),
-                "{error}"
-            ),
+            Err(error) => {
+                assert!(
+                    error.to_string().contains("scripted session rejection"),
+                    "{error}"
+                );
+                let source = std::error::Error::source(&error).ok_or("missing error source")?;
+                assert!(source.to_string().contains("scripted session rejection"));
+            }
             Ok(_) => return Err("session should have been rejected".into()),
         }
         Ok(())

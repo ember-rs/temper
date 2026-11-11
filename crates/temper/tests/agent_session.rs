@@ -45,9 +45,13 @@ async fn streamed_chunks_are_concatenated_in_order() -> Result<(), Box<dyn std::
 #[tokio::test]
 async fn unknown_extension_notification_does_not_interrupt_the_turn()
 -> Result<(), Box<dyn std::error::Error>> {
-    let agent = FakeAgent::new("reply").into_agent();
+    let sent = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let agent = FakeAgent::new("reply")
+        .with_unknown_notification(sent.clone())
+        .into_agent();
     let mut session = agent.start_session(&std::env::current_dir()?).await?;
     assert_eq!(session.prompt("hello").await?, "reply");
+    assert!(sent.load(std::sync::atomic::Ordering::SeqCst));
     session.close().await?;
     Ok(())
 }

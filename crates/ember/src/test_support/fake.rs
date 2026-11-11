@@ -4,12 +4,21 @@ use agent_client_protocol::{Agent as AcpAgent, Channel, Client, v1 as acp};
 /// An in-memory agent that replies with fixed text.
 pub struct FakeAgent {
     reply: Vec<String>,
+    notification: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) enum SessionSetup {
+    Accept,
+    #[cfg(test)]
+    Reject,
 }
 
 pub(crate) async fn serve(
     channel: Channel,
     reply: Vec<String>,
-    reject_session: bool,
+    setup: SessionSetup,
+    notification: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
 ) -> agent_client_protocol::Result<()> {
     AcpAgent
         .v1()
@@ -23,10 +32,15 @@ pub(crate) async fn serve(
         )
         .on_receive_request(
             async move |_request: acp::schema::NewSessionRequest, responder, _connection| {
-                if reject_session {
-                    return responder.respond_with_internal_error("scripted session rejection");
+                match setup {
+                    SessionSetup::Accept => {
+                        responder.respond(acp::schema::NewSessionResponse::new("fake-session"))
+                    }
+                    #[cfg(test)]
+                    SessionSetup::Reject => {
+                        responder.respond_with_internal_error("scripted session rejection")
+                    }
                 }
-                responder.respond(acp::schema::NewSessionResponse::new("fake-session"))
             },
             agent_client_protocol::on_receive_request!(),
         )
@@ -35,13 +49,16 @@ pub(crate) async fn serve(
                   responder: acp::Responder<acp::schema::PromptResponse>,
                   connection: acp::ConnectionTo<Client>| {
                 let reply = reply.clone();
+                let notification = notification.clone();
 
                 async move {
-                    // Real agents send extension notifications that the client may not know.
-                    connection.send_notification(agent_client_protocol::UntypedMessage::new(
-                        "_auth/status_update",
-                        (),
-                    )?)?;
+                    if let Some(sent) = notification {
+                        // Real agents send extension notifications that the client may not know.
+                        connection.send_notification(
+                            agent_client_protocol::UntypedMessage::new("_auth/status_update", ())?,
+                        )?;
+                        sent.store(true, std::sync::atomic::Ordering::SeqCst);
+                    }
                     for chunk in reply {
                         let content =
                             acp::schema::ContentBlock::Text(acp::schema::TextContent::new(chunk));
@@ -71,6 +88,7 @@ impl FakeAgent {
     pub fn new(reply: impl Into<String>) -> Self {
         Self {
             reply: vec![reply.into()],
+            notification: None,
         }
     }
 
@@ -79,12 +97,23 @@ impl FakeAgent {
     pub fn with_chunks(chunks: impl IntoIterator<Item = impl Into<String>>) -> Self {
         Self {
             reply: chunks.into_iter().map(Into::into).collect(),
+            notification: None,
         }
+    }
+
+    /// Send an unknown extension notification and mark the flag once sent.
+    #[must_use]
+    pub fn with_unknown_notification(
+        mut self,
+        sent: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    ) -> Self {
+        self.notification = Some(sent);
+        self
     }
 
     /// Convert the fake into an agent that can start sessions.
     #[must_use]
     pub fn into_agent(self) -> Agent {
-        Agent::fake(self.reply, false)
+        Agent::fake(self.reply, SessionSetup::Accept, self.notification)
     }
 }
