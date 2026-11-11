@@ -1,4 +1,3 @@
-#[cfg(feature = "test-support")]
 use agent_client_protocol as acp;
 use tokio::sync::{mpsc, oneshot};
 
@@ -6,12 +5,8 @@ use crate::Error;
 
 /// An agent capable of starting sessions.
 pub struct Agent {
-    kind: Kind,
-}
-
-enum Kind {
-    #[cfg(feature = "test-support")]
-    Fake { reply: Vec<String> },
+    connect:
+        Box<dyn Fn() -> (acp::Channel, tokio::task::JoinHandle<acp::Result<()>>) + Send + Sync>,
 }
 
 enum Command {
@@ -37,49 +32,61 @@ impl Agent {
         &self,
         working_directory: &std::path::Path,
     ) -> Result<Session, Error> {
-        let _ = working_directory;
-        match self.kind {
-            #[cfg(feature = "test-support")]
-            Kind::Fake { ref reply } => {
-                let (client, server) = acp::Channel::duplex();
-                let reply = reply.clone();
-                let (commands, receiver) = mpsc::channel(8);
-                let (ready, initialized) = oneshot::channel();
-                let working_directory = working_directory.to_owned();
-                let task = tokio::spawn(async move {
-                    let server_task = tokio::spawn(crate::test_support::serve(server, reply));
-                    let result = run_client(client, working_directory, receiver, ready).await;
-                    server_task.abort();
-                    let server_result = server_task.await;
-                    if let Err(error) = server_result
-                        && !error.is_cancelled()
-                    {
-                        return Err(Error::Communication {
-                            message: error.to_string(),
-                        });
-                    }
-                    result.map_err(|error| Error::Communication {
-                        message: error.to_string(),
-                    })
-                });
-                initialized.await.map_err(|error| Error::Communication {
+        let (client, server_task) = (self.connect)();
+        let (commands, receiver) = mpsc::channel(8);
+        let (ready, initialized) = oneshot::channel();
+        let working_directory = working_directory.to_owned();
+        let task = tokio::spawn(async move {
+            let result = run_client(client, working_directory, receiver, ready).await;
+            server_task.abort();
+            let server_result = server_task.await;
+            if let Err(error) = server_result
+                && !error.is_cancelled()
+            {
+                return Err(Error::Communication {
                     message: error.to_string(),
-                })??;
-                Ok(Session { commands, task })
+                });
             }
+            result.map_err(|error| Error::Communication {
+                message: error.to_string(),
+            })
+        });
+        if initialized.await.is_err() {
+            return Err(match task.await {
+                Ok(Err(error)) => error,
+                Ok(Ok(())) => Error::Communication {
+                    message: "agent exited during setup".into(),
+                },
+                Err(error) => Error::Communication {
+                    message: error.to_string(),
+                },
+            });
         }
+        Ok(Session { commands, task })
     }
 
     #[cfg(feature = "test-support")]
-    pub(crate) fn fake(reply: Vec<String>) -> Self {
+    pub(crate) fn fake(reply: Vec<String>, reject_session: bool) -> Self {
         Self {
-            kind: Kind::Fake { reply },
+            connect: Box::new(move || {
+                let (client, server) = acp::Channel::duplex();
+                let task = tokio::spawn(crate::test_support::serve(
+                    server,
+                    reply.clone(),
+                    reject_session,
+                ));
+                (client, task)
+            }),
         }
     }
 }
 
 impl Session {
     /// Send a prompt and collect the agent's reply.
+    ///
+    /// The mutable borrow permits one prompt at a time. If this future is
+    /// dropped after sending, the agent still finishes the turn; its reply is
+    /// discarded and later prompts wait for it to finish.
     ///
     /// # Errors
     /// Returns an error if communication with the agent fails.
@@ -120,12 +127,11 @@ impl Session {
     }
 }
 
-#[cfg(feature = "test-support")]
 async fn run_client(
     channel: acp::Channel,
     working_directory: std::path::PathBuf,
     mut commands: mpsc::Receiver<Command>,
-    ready: oneshot::Sender<Result<(), Error>>,
+    ready: oneshot::Sender<()>,
 ) -> acp::Result<()> {
     acp::Client
         .v1()
@@ -141,7 +147,7 @@ async fn run_client(
                 .build_session(&working_directory)
                 .block_task()
                 .run_until(async move |acp::v1::SessionSetup { mut session, .. }| {
-                    let _ = ready.send(Ok(()));
+                    let _ = ready.send(());
 
                     while let Some(command) = commands.recv().await {
                         match command {
@@ -173,10 +179,45 @@ mod tests {
     use tokio::sync::mpsc;
 
     #[cfg(feature = "test-support")]
+    fn tracked_agent(token: std::sync::Arc<()>) -> super::Agent {
+        super::Agent {
+            connect: Box::new(move || {
+                let (client, server) = super::acp::Channel::duplex();
+                let token = token.clone();
+                let task = tokio::spawn(async move {
+                    let result =
+                        crate::test_support::serve(server, vec!["reply".to_owned()], false).await;
+                    drop(token);
+                    result
+                });
+                (client, task)
+            }),
+        }
+    }
+
+    #[cfg(feature = "test-support")]
+    #[tokio::test]
+    async fn setup_preserves_the_agents_rejection() -> Result<(), Box<dyn std::error::Error>> {
+        let agent = super::Agent::fake(vec![], true);
+        let result = agent.start_session(&std::env::current_dir()?).await;
+        match result {
+            Err(error) => assert!(
+                error.to_string().contains("scripted session rejection"),
+                "{error}"
+            ),
+            Ok(_) => return Err("session should have been rejected".into()),
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "test-support")]
     #[tokio::test]
     async fn dropping_session_stops_client_and_server() -> Result<(), Box<dyn std::error::Error>> {
-        let agent = super::Agent::fake(vec!["reply".to_owned()]);
+        let token = std::sync::Arc::new(());
+        let agent = tracked_agent(token.clone());
         let session = agent.start_session(&std::env::current_dir()?).await?;
+        drop(agent);
+        assert_eq!(std::sync::Arc::strong_count(&token), 2);
         let task = session.task.abort_handle();
         drop(session);
         tokio::time::timeout(std::time::Duration::from_secs(2), async {
@@ -185,17 +226,20 @@ mod tests {
             }
         })
         .await?;
+        assert_eq!(std::sync::Arc::strong_count(&token), 1);
         Ok(())
     }
 
     #[cfg(feature = "test-support")]
     #[tokio::test]
     async fn close_waits_for_client_and_server() -> Result<(), Box<dyn std::error::Error>> {
-        let agent = super::Agent::fake(vec!["reply".to_owned()]);
+        let token = std::sync::Arc::new(());
+        let agent = tracked_agent(token.clone());
         let session = agent.start_session(&std::env::current_dir()?).await?;
-        let task = session.task.abort_handle();
+        drop(agent);
+        assert_eq!(std::sync::Arc::strong_count(&token), 2);
         session.close().await?;
-        assert!(task.is_finished());
+        assert_eq!(std::sync::Arc::strong_count(&token), 1);
         Ok(())
     }
 

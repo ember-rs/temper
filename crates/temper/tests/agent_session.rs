@@ -41,3 +41,13 @@ async fn streamed_chunks_are_concatenated_in_order() -> Result<(), Box<dyn std::
     session.close().await?;
     Ok(())
 }
+
+#[tokio::test]
+async fn unknown_extension_notification_does_not_interrupt_the_turn()
+-> Result<(), Box<dyn std::error::Error>> {
+    let agent = FakeAgent::new("reply").into_agent();
+    let mut session = agent.start_session(&std::env::current_dir()?).await?;
+    assert_eq!(session.prompt("hello").await?, "reply");
+    session.close().await?;
+    Ok(())
+}

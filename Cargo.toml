@@ -23,6 +23,7 @@ ember = { package = "temper-ember", path = "crates/ember" }
 graph-flow = { version = "0.8.1", default-features = false }
 agent-client-protocol = "5.0.0"
 thiserror = "2.0.21"
+tokio = "1"
 
 bolero = "0.13.7"
 quint-connect = "0.1.2"

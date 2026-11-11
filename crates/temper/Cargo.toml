@@ -19,7 +19,7 @@ ember.workspace = true
 
 [dev-dependencies]
 ember = { workspace = true, features = ["test-support"] }
-tokio = { version = "1", features = ["macros", "rt"] }
+tokio = { workspace = true, features = ["macros", "rt"] }
 
 [package.metadata.cargo-machete]
 # Scaffold: compile-checked only. Remove each entry once it is actually used.
