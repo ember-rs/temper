@@ -17,6 +17,10 @@ ingot.workspace = true
 bellows.workspace = true
 ember.workspace = true
 
+[dev-dependencies]
+ember = { workspace = true, features = ["test-support"] }
+tokio = { workspace = true, features = ["macros", "rt"] }
+
 [package.metadata.cargo-machete]
 # Scaffold: compile-checked only. Remove each entry once it is actually used.
 ignored = ["bellows", "ember"]

@@ -6,3 +6,11 @@
 //! workspace never names an ACP type.
 //!
 //! Must not depend on `bellows` or `graph-flow` (`cargo xtask layers`).
+mod agent;
+mod error;
+pub use agent::{Agent, Session};
+pub use error::Error;
+
+#[cfg(feature = "test-support")]
+/// Utilities for testing code that uses Ember.
+pub mod test_support;
