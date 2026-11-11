@@ -122,7 +122,7 @@ impl Session {
 async fn run_client(
     channel: acp::Channel,
     working_directory: std::path::PathBuf,
-    mut commands: mpsc::Receiver<Command>,
+    commands: mpsc::Receiver<Command>,
     ready: oneshot::Sender<()>,
 ) -> acp::Result<()> {
     acp::Client
@@ -135,30 +135,38 @@ async fn run_client(
                 .block_task()
                 .await?;
 
-            connection
+            let acp::v1::SessionSetup { mut session, .. } = connection
                 .build_session(&working_directory)
                 .block_task()
-                .run_until(async move |acp::v1::SessionSetup { mut session, .. }| {
-                    let _ = ready.send(());
-
-                    while let Some(command) = commands.recv().await {
-                        match command {
-                            Command::Prompt { text, response } => {
-                                let result = match session.send_prompt(text) {
-                                    Ok(()) => session.read_to_string().await,
-                                    Err(error) => Err(error),
-                                }
-                                .map_err(Error::communication);
-                                let _ = response.send(result);
-                            }
-                            Command::Close => break,
-                        }
-                    }
-                    Ok(())
-                })
-                .await
+                .start_session()
+                .await?;
+            let _ = ready.send(());
+            serve_commands(&mut session, commands).await;
+            Ok(())
         })
         .await
+}
+
+async fn serve_commands(
+    session: &mut acp::v1::ActiveSession<'_, acp::Agent>,
+    mut commands: mpsc::Receiver<Command>,
+) {
+    while let Some(command) = commands.recv().await {
+        match command {
+            Command::Prompt { text, response } => {
+                let _ = response.send(prompt_once(session, text).await);
+            }
+            Command::Close => break,
+        }
+    }
+}
+
+async fn prompt_once(
+    session: &mut acp::v1::ActiveSession<'_, acp::Agent>,
+    text: String,
+) -> Result<String, Error> {
+    session.send_prompt(text).map_err(Error::communication)?;
+    session.read_to_string().await.map_err(Error::communication)
 }
 
 #[cfg(test)]
