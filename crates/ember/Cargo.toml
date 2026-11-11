@@ -11,9 +11,17 @@ publish.workspace = true
 [lib]
 name = "ember"
 
+[features]
+test-support = []
+
 [dependencies]
 ingot.workspace = true
 agent-client-protocol.workspace = true
+thiserror.workspace = true
+tokio = { version = "1", features = ["sync", "rt"]}
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt", "time"] }
 
 [package.metadata.cargo-machete]
 # Scaffold: compile-checked only. Remove each entry once it is actually used.
