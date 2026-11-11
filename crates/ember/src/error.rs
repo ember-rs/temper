@@ -3,12 +3,15 @@
 #[non_exhaustive]
 pub enum Error {
     /// Communication with the agent failed.
-    #[error("agent communication failed: {source}")]
+    #[error("agent communication failed")]
     Communication {
         /// The underlying communication failure.
         #[source]
         source: Box<dyn std::error::Error + Send + Sync>,
     },
+    /// The agent exited before session setup completed.
+    #[error("agent exited during session setup")]
+    SetupAborted,
 }
 
 impl Error {

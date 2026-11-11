@@ -51,9 +51,7 @@ impl Agent {
         if initialized.await.is_err() {
             return Err(match task.await {
                 Ok(Err(error)) => error,
-                Ok(Ok(())) => {
-                    Error::communication(std::io::Error::other("agent exited during setup"))
-                }
+                Ok(Ok(())) => Error::SetupAborted,
                 Err(error) => Error::communication(error),
             });
         }
@@ -203,10 +201,7 @@ mod tests {
         let result = agent.start_session(&std::env::current_dir()?).await;
         match result {
             Err(error) => {
-                assert!(
-                    error.to_string().contains("scripted session rejection"),
-                    "{error}"
-                );
+                assert_eq!(error.to_string(), "agent communication failed");
                 let source = std::error::Error::source(&error).ok_or("missing error source")?;
                 assert!(source.to_string().contains("scripted session rejection"));
             }
